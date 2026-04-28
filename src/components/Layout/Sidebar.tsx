@@ -1,29 +1,43 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard,
-  Users,
-  BookOpen,
-  Users2,
-  Building2,
-  ClipboardList,
-  Settings,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  X,
+  LayoutDashboard, Users, BookOpen, Users2, Building2, ClipboardList,
+  Settings, LogOut, ChevronLeft, ChevronRight, Menu, X,
+  Search, FileText, Bell, UserCircle, Compass, Shield,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
+import NotificationBell from '../Notifications/NotificationBell'
 
-const NAV_ITEMS = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { to: '/visitors', icon: Users, label: 'Visitors' },
-  { to: '/membership', icon: BookOpen, label: 'Membership Class' },
-  { to: '/cell-groups', icon: Users2, label: 'Cell Groups' },
-  { to: '/departments', icon: Building2, label: 'Departments' },
-  { to: '/tasks', icon: ClipboardList, label: 'Tasks & Follow-Up' },
-  { to: '/admin', icon: Settings, label: 'Admin & Settings' },
+// Admin navigation items
+const ADMIN_NAV = [
+  { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { to: '/admin/visitors', icon: Users, label: 'Visitors' },
+  { to: '/admin/membership', icon: BookOpen, label: 'Membership' },
+  { to: '/admin/cell-groups', icon: Users2, label: 'Cell Groups' },
+  { to: '/admin/departments', icon: Building2, label: 'Departments' },
+  { to: '/admin/tasks', icon: ClipboardList, label: 'Tasks' },
+  { to: '/admin/users', icon: UserCircle, label: 'Users' },
+  { to: '/admin/applications', icon: FileText, label: 'Applications' },
+  { to: '/admin/group-admins', icon: Shield, label: 'Group Admins' },
+  { to: '/admin/settings', icon: Settings, label: 'Settings' },
+]
+
+// User navigation items
+const USER_NAV = [
+  { to: '/user', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { to: '/user/explore', icon: Compass, label: 'Explore' },
+  { to: '/user/applications', icon: FileText, label: 'Applications' },
+  { to: '/user/memberships', icon: Users, label: 'Memberships' },
+  { to: '/user/notifications', icon: Bell, label: 'Notifications' },
+  { to: '/user/profile', icon: UserCircle, label: 'Profile' },
+]
+
+// Group Admin navigation items
+const GROUP_ADMIN_NAV = [
+  { to: '/group-admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { to: '/group-admin/applications', icon: FileText, label: 'Applications' },
+  { to: '/group-admin/members', icon: Users, label: 'Members' },
+  { to: '/group-admin/notifications', icon: Bell, label: 'Notifications' },
 ]
 
 interface SidebarProps {
@@ -33,9 +47,21 @@ interface SidebarProps {
   onMobileClose: () => void
 }
 
+function getNavItems(pathname: string, isAdmin: boolean, isGroupAdmin: boolean) {
+  if (pathname.startsWith('/admin')) return ADMIN_NAV
+  if (pathname.startsWith('/group-admin')) return GROUP_ADMIN_NAV
+  if (pathname.startsWith('/user')) return USER_NAV
+  // Default based on role
+  if (isAdmin) return ADMIN_NAV
+  if (isGroupAdmin) return GROUP_ADMIN_NAV
+  return USER_NAV
+}
+
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
-  const { signOut, adminProfile } = useAuth()
+  const { signOut, adminProfile, userProfile, isAdmin, isGroupAdmin } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const NAV_ITEMS = getNavItems(location.pathname, isAdmin, isGroupAdmin)
 
   async function handleSignOut() {
     await signOut()
@@ -96,11 +122,13 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
       {/* Footer */}
       <div className="p-3 border-t border-navy-700">
-        {!collapsed && adminProfile && (
+        {!collapsed && (adminProfile || userProfile) && (
           <div className="px-2 py-2 mb-2">
-            <p className="text-white text-xs font-semibold truncate">{adminProfile.full_name}</p>
+            <p className="text-white text-xs font-semibold truncate">
+              {adminProfile?.full_name || userProfile?.full_name}
+            </p>
             <span className="inline-block bg-gold-500 text-navy-900 text-xs px-1.5 py-0.5 rounded font-medium capitalize mt-0.5">
-              {adminProfile.role.replace('_', ' ')}
+              {adminProfile ? adminProfile.role.replace('_', ' ') : isGroupAdmin ? 'Group Admin' : 'Member'}
             </span>
           </div>
         )}
@@ -159,11 +187,11 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                 ))}
               </nav>
               <div className="p-3 border-t border-navy-700">
-                {adminProfile && (
+                {(adminProfile || userProfile) && (
                   <div className="px-2 py-2 mb-2">
-                    <p className="text-white text-xs font-semibold truncate">{adminProfile.full_name}</p>
+                    <p className="text-white text-xs font-semibold truncate">{adminProfile?.full_name || userProfile?.full_name}</p>
                     <span className="inline-block bg-gold-500 text-navy-900 text-xs px-1.5 py-0.5 rounded font-medium capitalize mt-0.5">
-                      {adminProfile.role.replace('_', ' ')}
+                      {adminProfile ? adminProfile.role.replace('_', ' ') : isGroupAdmin ? 'Group Admin' : 'Member'}
                     </span>
                   </div>
                 )}

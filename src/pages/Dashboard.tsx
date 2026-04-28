@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, BookOpen, Users2, Building2, ClipboardList, TrendingUp, UserPlus, Clock } from 'lucide-react'
+import { Users, BookOpen, Users2, Building2, ClipboardList, TrendingUp, UserPlus, Clock, FileText, Shield, Hourglass, CheckCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
-import type { Visitor, Task } from '../types'
+import type { Visitor, Task, Application } from '../types'
 import toast from 'react-hot-toast'
 
 interface Stats {
@@ -13,6 +13,10 @@ interface Stats {
   membershipEnrolled: number
   totalCellGroups: number
   totalDepartments: number
+  totalUsers: number
+  pendingApplications: number
+  totalGroupAdmins: number
+  activeMemberships: number
 }
 
 export default function Dashboard() {
@@ -23,9 +27,14 @@ export default function Dashboard() {
     membershipEnrolled: 0,
     totalCellGroups: 0,
     totalDepartments: 0,
+    totalUsers: 0,
+    pendingApplications: 0,
+    totalGroupAdmins: 0,
+    activeMemberships: 0,
   })
   const [recentVisitors, setRecentVisitors] = useState<Visitor[]>([])
   const [pendingTasks, setPendingTasks] = useState<Task[]>([])
+  const [recentApplications, setRecentApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -43,6 +52,11 @@ export default function Dashboard() {
           { count: deptCount, error: e6 },
           { data: recent, error: e7 },
           { data: tasks, error: e8 },
+          { count: userCount },
+          { count: pendingApps },
+          { count: groupAdmins },
+          { count: activeMembers },
+          { data: latestApps },
         ] = await Promise.all([
           supabase.from('visitors').select('id', { count: 'exact' }),
           supabase.from('visitors').select('id', { count: 'exact' }).gte('visit_date', monthStart),
@@ -52,6 +66,11 @@ export default function Dashboard() {
           supabase.from('departments').select('id', { count: 'exact' }),
           supabase.from('visitors').select('*').order('created_at', { ascending: false }).limit(5),
           supabase.from('tasks').select('*, visitors(id, name, phone)').eq('status', 'pending').order('scheduled_date', { ascending: true }).limit(5),
+          supabase.from('user_profiles').select('id', { count: 'exact' }),
+          supabase.from('applications').select('id', { count: 'exact' }).eq('status', 'pending'),
+          supabase.from('group_admin_assignments').select('user_id', { count: 'exact' }),
+          supabase.from('user_memberships').select('id', { count: 'exact' }).eq('is_active', true),
+          supabase.from('applications').select('*, applicant:user_profiles(full_name, email)').order('created_at', { ascending: false }).limit(5),
         ])
 
         if (e1 || e2 || e3 || e4 || e5 || e6 || e7 || e8) {
@@ -68,9 +87,14 @@ export default function Dashboard() {
           membershipEnrolled: enrolled ?? 0,
           totalCellGroups: cellCount ?? 0,
           totalDepartments: deptCount ?? 0,
+          totalUsers: userCount ?? 0,
+          pendingApplications: pendingApps ?? 0,
+          totalGroupAdmins: groupAdmins ?? 0,
+          activeMemberships: activeMembers ?? 0,
         })
         setRecentVisitors((recent ?? []) as Visitor[])
         setPendingTasks((tasks ?? []) as Task[])
+        setRecentApplications((latestApps ?? []) as Application[])
       } catch (err) {
         toast.error('Unexpected error loading dashboard')
         console.error(err)
@@ -87,12 +111,15 @@ export default function Dashboard() {
   }, [])
 
   const statCards = [
-    { label: 'Total Visitors', value: stats.totalVisitors, icon: Users, color: 'bg-blue-500', to: '/visitors' },
-    { label: 'New This Month', value: stats.newThisMonth, icon: UserPlus, color: 'bg-gold-500', to: '/visitors' },
-    { label: 'Pending Tasks', value: stats.pendingTasks, icon: ClipboardList, color: 'bg-red-500', to: '/tasks' },
-    { label: 'Class Enrolled', value: stats.membershipEnrolled, icon: BookOpen, color: 'bg-purple-500', to: '/membership' },
-    { label: 'Cell Groups', value: stats.totalCellGroups, icon: Users2, color: 'bg-emerald-500', to: '/cell-groups' },
-    { label: 'Departments', value: stats.totalDepartments, icon: Building2, color: 'bg-orange-500', to: '/departments' },
+    { label: 'Total Visitors', value: stats.totalVisitors, icon: Users, color: 'bg-blue-500', to: '/admin/visitors' },
+    { label: 'New This Month', value: stats.newThisMonth, icon: UserPlus, color: 'bg-gold-500', to: '/admin/visitors' },
+    { label: 'Pending Tasks', value: stats.pendingTasks, icon: ClipboardList, color: 'bg-red-500', to: '/admin/tasks' },
+    { label: 'Platform Users', value: stats.totalUsers, icon: Users, color: 'bg-indigo-500', to: '/admin/users' },
+    { label: 'Pending Apps', value: stats.pendingApplications, icon: Hourglass, color: 'bg-amber-500', to: '/admin/applications' },
+    { label: 'Active Members', value: stats.activeMemberships, icon: CheckCircle, color: 'bg-emerald-500', to: '/admin/users' },
+    { label: 'Cell Groups', value: stats.totalCellGroups, icon: Users2, color: 'bg-teal-500', to: '/admin/cell-groups' },
+    { label: 'Departments', value: stats.totalDepartments, icon: Building2, color: 'bg-orange-500', to: '/admin/departments' },
+    { label: 'Group Admins', value: stats.totalGroupAdmins, icon: Shield, color: 'bg-purple-500', to: '/admin/group-admins' },
   ]
 
   const stageBadge = (stage: string) => {
@@ -131,7 +158,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         {statCards.map(({ label, value, icon: Icon, color, to }) => (
           <Link
             key={label}
@@ -147,13 +174,13 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Two columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Three columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Visitors */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-navy-800">Recent Visitors</h3>
-            <Link to="/visitors" className="text-xs text-gold-600 hover:text-gold-700 font-medium">
+            <Link to="/admin/visitors" className="text-xs text-gold-600 hover:text-gold-700 font-medium">
               View all →
             </Link>
           </div>
@@ -164,7 +191,7 @@ export default function Dashboard() {
               recentVisitors.map(v => (
                 <Link
                   key={v.id}
-                  to={`/visitors/${v.id}`}
+                  to={`/admin/visitors/${v.id}`}
                   className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -189,7 +216,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-navy-800">Pending Follow-Ups</h3>
-            <Link to="/tasks" className="text-xs text-gold-600 hover:text-gold-700 font-medium">
+            <Link to="/admin/tasks" className="text-xs text-gold-600 hover:text-gold-700 font-medium">
               View all →
             </Link>
           </div>
@@ -212,6 +239,42 @@ export default function Dashboard() {
                     {t.task_type}
                   </span>
                 </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Recent Applications */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-navy-800">Recent Applications</h3>
+            <Link to="/admin/applications" className="text-xs text-gold-600 hover:text-gold-700 font-medium">
+              View all →
+            </Link>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {recentApplications.length === 0 ? (
+              <p className="text-center text-gray-400 text-sm py-8">No applications yet</p>
+            ) : (
+              recentApplications.map(app => (
+                <Link
+                  key={app.id}
+                  to={`/admin/applications/${app.id}`}
+                  className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${app.status === 'pending' ? 'bg-amber-100' : app.status === 'approved' ? 'bg-emerald-100' : 'bg-gray-100'}`}>
+                      {app.status === 'pending' ? <Hourglass size={14} className="text-amber-600" /> : app.status === 'approved' ? <CheckCircle size={14} className="text-emerald-600" /> : <Clock size={14} className="text-gray-600" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{app.applicant?.full_name || 'Unknown'}</p>
+                      <p className="text-xs text-gray-400">{app.target_name}</p>
+                    </div>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${app.status === 'pending' ? 'bg-amber-100 text-amber-700' : app.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>
+                    {app.status}
+                  </span>
+                </Link>
               ))
             )}
           </div>

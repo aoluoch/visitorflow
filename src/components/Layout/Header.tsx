@@ -1,15 +1,18 @@
 import { useLocation } from 'react-router-dom'
-import { Bell } from 'lucide-react'
 import { MobileMenuButton } from './Sidebar'
+import { useAuth } from '../../context/AuthContext'
+import NotificationBell from '../Notifications/NotificationBell'
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
+  '/admin': 'Admin Dashboard',
+  '/user': 'My Dashboard',
+  '/group-admin': 'Group Admin',
   '/visitors': 'Visitors',
   '/membership': 'Membership Class',
   '/cell-groups': 'Cell Groups',
   '/departments': 'Departments',
   '/tasks': 'Tasks & Follow-Up',
-  '/admin': 'Admin & Settings',
 }
 
 interface HeaderProps {
@@ -18,8 +21,11 @@ interface HeaderProps {
 
 export default function Header({ onMobileMenuOpen }: HeaderProps) {
   const location = useLocation()
-  const pathBase = '/' + location.pathname.split('/')[1]
+  const { adminProfile, userProfile } = useAuth()
+  const pathBase = '/' + location.pathname.split('/').filter(Boolean).slice(0, 1).join('/')
   const title = PAGE_TITLES[pathBase] ?? 'VisitorFlow'
+  const displayName = adminProfile?.full_name || userProfile?.full_name || 'User'
+  const initial = displayName.charAt(0).toUpperCase()
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
@@ -29,11 +35,9 @@ export default function Header({ onMobileMenuOpen }: HeaderProps) {
           <h1 className="text-lg font-bold text-navy-800">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors relative">
-            <Bell size={20} />
-          </button>
+          <NotificationBell />
           <div className="w-8 h-8 rounded-full bg-navy-700 flex items-center justify-center">
-            <span className="text-gold-400 text-xs font-bold">A</span>
+            <span className="text-gold-400 text-xs font-bold">{initial}</span>
           </div>
         </div>
       </div>

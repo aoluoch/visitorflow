@@ -170,7 +170,7 @@ export default function MembershipClassPage() {
               ) : records.map(r => (
                 <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
-                    <Link to={`/visitors/${r.visitors.id}`} className="font-medium text-navy-700 hover:text-gold-600">{r.visitors.name}</Link>
+                    <Link to={`/admin/visitors/${r.visitors.id}`} className="font-medium text-navy-700 hover:text-gold-600">{r.visitors.name}</Link>
                     {r.visitors.phone && <p className="text-xs text-gray-400">{r.visitors.phone}</p>}
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">

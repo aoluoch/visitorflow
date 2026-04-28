@@ -24,7 +24,7 @@ export default function DepartmentsPage() {
   const [showEnrollModal, setShowEnrollModal] = useState(false)
   const [showServiceModal, setShowServiceModal] = useState(false)
   const [editingDept, setEditingDept] = useState<Department | null>(null)
-  const [deptForm, setDeptForm] = useState({ name: '', description: '', leader: '' })
+  const [deptForm, setDeptForm] = useState({ name: '', description: '', leader: '', is_public: true, status: 'active' })
   const [enrollForm, setEnrollForm] = useState({ visitor_id: '', department_id: '' })
   const [serviceForm, setServiceForm] = useState({ visitor_department_id: '', service_date: new Date().toISOString().split('T')[0], description: '', hours_served: '' })
   const [saving, setSaving] = useState(false)
@@ -56,12 +56,12 @@ export default function DepartmentsPage() {
     e.preventDefault()
     if (!deptForm.name.trim()) { toast.error('Name required'); return }
     setSaving(true)
-    const payload = { name: deptForm.name, description: deptForm.description || null, leader: deptForm.leader || null }
+    const payload = { name: deptForm.name, description: deptForm.description || null, leader: deptForm.leader || null, is_public: deptForm.is_public, status: deptForm.status }
     const { error } = editingDept
       ? await supabase.from('departments').update(payload).eq('id', editingDept.id)
       : await supabase.from('departments').insert([payload])
     if (error) toast.error(error.message)
-    else { toast.success(editingDept ? 'Updated!' : 'Department created!'); setShowDeptModal(false); load() }
+    else { toast.success(editingDept ? 'Updated!' : 'Department created!'); setShowDeptModal(false); setDeptForm({ name: '', description: '', leader: '', is_public: true, status: 'active' }); load() }
     setSaving(false)
   }
 
@@ -126,7 +126,7 @@ export default function DepartmentsPage() {
           <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold-400" />
         </div>
         {tab === 'departments' && (
-          <button onClick={() => { setEditingDept(null); setDeptForm({ name: '', description: '', leader: '' }); setShowDeptModal(true) }} className="flex items-center gap-2 bg-navy-700 hover:bg-navy-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium">
+          <button onClick={() => { setEditingDept(null); setDeptForm({ name: '', description: '', leader: '', is_public: true, status: 'active' }); setShowDeptModal(true) }} className="flex items-center gap-2 bg-navy-700 hover:bg-navy-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium">
             <Plus size={16} /> New Department
           </button>
         )}
@@ -156,7 +156,7 @@ export default function DepartmentsPage() {
                   <Building2 size={20} className="text-gold-600" />
                 </div>
                 <div className="flex gap-1">
-                  <button onClick={() => { setEditingDept(d); setDeptForm({ name: d.name, description: d.description ?? '', leader: d.leader ?? '' }); setShowDeptModal(true) }} className="p-1.5 rounded-lg text-gray-400 hover:text-navy-700 hover:bg-navy-50"><Edit2 size={14} /></button>
+                  <button onClick={() => { setEditingDept(d); setDeptForm({ name: d.name, description: d.description ?? '', leader: d.leader ?? '', is_public: (d as any).is_public ?? true, status: (d as any).status ?? 'active' }); setShowDeptModal(true) }} className="p-1.5 rounded-lg text-gray-400 hover:text-navy-700 hover:bg-navy-50"><Edit2 size={14} /></button>
                   <button onClick={() => setDeleteId(d.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"><Trash2 size={14} /></button>
                 </div>
               </div>
@@ -196,7 +196,7 @@ export default function DepartmentsPage() {
                     <td className="px-4 py-3 text-gray-600">{a.departments.name}</td>
                     <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{format(new Date(a.enrollment_date), 'MMM d, yyyy')}</td>
                     <td className="px-4 py-3 text-right">
-                      <Link to={`/visitors/${a.visitor_id}`} className="text-xs text-gold-600 hover:text-gold-700 font-medium">View →</Link>
+                      <Link to={`/admin/visitors/${a.visitor_id}`} className="text-xs text-gold-600 hover:text-gold-700 font-medium">View →</Link>
                     </td>
                   </tr>
                 ))}
@@ -260,6 +260,21 @@ export default function DepartmentsPage() {
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
                 <textarea rows={2} value={deptForm.description} onChange={e => setDeptForm(f => ({ ...f, description: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                  <select value={deptForm.status} onChange={e => setDeptForm(f => ({ ...f, status: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-white">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer pb-2">
+                    <input type="checkbox" checked={deptForm.is_public} onChange={e => setDeptForm(f => ({ ...f, is_public: e.target.checked }))} className="w-4 h-4 text-gold-500 border-gray-300 rounded focus:ring-gold-500" />
+                    Visible to users
+                  </label>
+                </div>
               </div>
               <div className="flex gap-3">
                 <button type="button" onClick={() => setShowDeptModal(false)} className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>

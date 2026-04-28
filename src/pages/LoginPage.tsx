@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { Eye, EyeOff, LogIn, ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, LogIn } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
+import { Link } from 'react-router-dom'
 
 export default function LoginPage() {
   const { signIn } = useAuth()
@@ -45,12 +46,8 @@ export default function LoginPage() {
                 <img src="/gamlogo.png" alt="Grace Arena Ministries" className="w-full h-full object-contain" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-white">VisitorFlow</h1>
+            <h1 className="text-2xl font-bold text-white">Sign in to VisitorFlow</h1>
             <p className="text-navy-300 text-sm mt-1">Grace Arena Ministries</p>
-            <div className="flex items-center justify-center gap-1.5 mt-3">
-              <ShieldCheck size={14} className="text-gold-400" />
-              <span className="text-gold-400 text-xs font-medium">Admin Portal</span>
-            </div>
           </div>
 
           {/* Form */}
@@ -108,10 +105,9 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="px-8 pb-6 text-center">
-            <p className="text-navy-500 text-xs">
-              Access restricted to administrators only
-            </p>
+          <div className="px-8 pb-6 text-center text-xs text-navy-300 space-x-3">
+            <Link to="/forgot-password" className="text-gold-400 hover:text-gold-300">Forgot password?</Link>
+            <Link to="/register" className="text-gold-400 hover:text-gold-300">Create account</Link>
           </div>
         </div>
       </div>

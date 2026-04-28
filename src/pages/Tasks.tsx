@@ -151,7 +151,7 @@ export default function TasksPage() {
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${t.task_type === 'call' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>{t.task_type}</span>
                   </div>
                   {t.visitors && (
-                    <Link to={`/visitors/${t.visitor_id}`} className="text-xs text-gold-600 hover:text-gold-700 font-medium">
+                    <Link to={`/admin/visitors/${t.visitor_id}`} className="text-xs text-gold-600 hover:text-gold-700 font-medium">
                       {t.visitors.name}{t.visitors.phone ? ` · ${t.visitors.phone}` : ''}
                     </Link>
                   )}

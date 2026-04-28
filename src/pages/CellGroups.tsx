@@ -19,7 +19,7 @@ export default function CellGroupsPage() {
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [editingGroup, setEditingGroup] = useState<CellGroup | null>(null)
-  const [groupForm, setGroupForm] = useState({ name: '', leader: '', location: '', meeting_day: '', meeting_time: '' })
+  const [groupForm, setGroupForm] = useState({ name: '', leader: '', location: '', meeting_day: '', meeting_time: '', description: '', is_public: true, status: 'active', capacity: '' })
   const [assignForm, setAssignForm] = useState({ visitor_id: '', cell_group_id: '' })
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -47,13 +47,13 @@ export default function CellGroupsPage() {
 
   function openCreateGroup() {
     setEditingGroup(null)
-    setGroupForm({ name: '', leader: '', location: '', meeting_day: '', meeting_time: '' })
+    setGroupForm({ name: '', leader: '', location: '', meeting_day: '', meeting_time: '', description: '', is_public: true, status: 'active', capacity: '' })
     setShowGroupModal(true)
   }
 
   function openEditGroup(g: CellGroup) {
     setEditingGroup(g)
-    setGroupForm({ name: g.name, leader: g.leader ?? '', location: g.location ?? '', meeting_day: g.meeting_day ?? '', meeting_time: g.meeting_time ?? '' })
+    setGroupForm({ name: g.name, leader: g.leader ?? '', location: g.location ?? '', meeting_day: g.meeting_day ?? '', meeting_time: g.meeting_time ?? '', description: (g as any).description ?? '', is_public: (g as any).is_public ?? true, status: (g as any).status ?? 'active', capacity: (g as any).capacity?.toString() ?? '' })
     setShowGroupModal(true)
   }
 
@@ -61,12 +61,12 @@ export default function CellGroupsPage() {
     e.preventDefault()
     if (!groupForm.name.trim()) { toast.error('Group name is required'); return }
     setSaving(true)
-    const payload = { name: groupForm.name, leader: groupForm.leader || null, location: groupForm.location || null, meeting_day: groupForm.meeting_day || null, meeting_time: groupForm.meeting_time || null }
+    const payload = { name: groupForm.name, leader: groupForm.leader || null, location: groupForm.location || null, meeting_day: groupForm.meeting_day || null, meeting_time: groupForm.meeting_time || null, description: groupForm.description || null, is_public: groupForm.is_public, status: groupForm.status, capacity: groupForm.capacity ? parseInt(groupForm.capacity) : null }
     const { error } = editingGroup
       ? await supabase.from('cell_groups').update(payload).eq('id', editingGroup.id)
       : await supabase.from('cell_groups').insert([payload])
     if (error) toast.error(error.message)
-    else { toast.success(editingGroup ? 'Updated!' : 'Cell group created!'); setShowGroupModal(false); load() }
+    else { toast.success(editingGroup ? 'Updated!' : 'Cell group created!'); setShowGroupModal(false); setGroupForm({ name: '', leader: '', location: '', meeting_day: '', meeting_time: '', description: '', is_public: true, status: 'active', capacity: '' }); load() }
     setSaving(false)
   }
 
@@ -187,7 +187,7 @@ export default function CellGroupsPage() {
                     <td className="px-4 py-3 text-gray-600">{(a as any).cell_groups?.name}</td>
                     <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{a.assigned_date}</td>
                     <td className="px-4 py-3 text-right">
-                      <Link to={`/visitors/${a.visitor_id}`} className="text-xs text-gold-600 hover:text-gold-700 font-medium">View →</Link>
+                      <Link to={`/admin/visitors/${a.visitor_id}`} className="text-xs text-gold-600 hover:text-gold-700 font-medium">View →</Link>
                     </td>
                   </tr>
                 ))}
@@ -210,6 +210,10 @@ export default function CellGroupsPage() {
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Group Name *</label>
                 <input required value={groupForm.name} onChange={e => setGroupForm(f => ({ ...f, name: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400" />
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                <textarea rows={2} value={groupForm.description} onChange={e => setGroupForm(f => ({ ...f, description: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 resize-none" />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Leader</label>
@@ -230,7 +234,23 @@ export default function CellGroupsPage() {
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Meeting Time</label>
                   <input type="time" value={groupForm.meeting_time} onChange={e => setGroupForm(f => ({ ...f, meeting_time: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400" />
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Capacity</label>
+                  <input type="number" min="0" value={groupForm.capacity} onChange={e => setGroupForm(f => ({ ...f, capacity: e.target.value }))} placeholder="Unlimited" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                  <select value={groupForm.status} onChange={e => setGroupForm(f => ({ ...f, status: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 bg-white">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="full">Full</option>
+                  </select>
+                </div>
               </div>
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={groupForm.is_public} onChange={e => setGroupForm(f => ({ ...f, is_public: e.target.checked }))} className="w-4 h-4 text-gold-500 border-gray-300 rounded focus:ring-gold-500" />
+                Visible to users on Explore page
+              </label>
               <div className="flex gap-3">
                 <button type="button" onClick={() => setShowGroupModal(false)} className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
                 <button type="submit" disabled={saving} className="flex-1 bg-navy-700 hover:bg-navy-600 text-white py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
