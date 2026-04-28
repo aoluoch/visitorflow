@@ -81,6 +81,14 @@ export default function AdminSettingsPage() {
       setDeleteId(null)
       return
     }
+    // Server-side super_admin check via RPC
+    const { error: rpcError } = await supabase.rpc('delete_admin', { target_id: id })
+    if (rpcError) {
+      toast.error(rpcError.message)
+      setDeleteId(null)
+      return
+    }
+    // Now remove the auth user
     const { error } = await supabaseAdmin.auth.admin.deleteUser(id)
     if (error) toast.error(error.message)
     else { toast.success('Admin removed'); loadAdmins() }
